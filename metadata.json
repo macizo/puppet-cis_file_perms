@@ -1,0 +1,33 @@
+{
+  "name": "ehasbun-cis_file_perms",
+  "version": "0.1.0",
+  "author": "Eduardo Hasbun",
+  "summary": "CIS file-permission hardening without catalog bloat: one resource per directory tree via a custom type/provider",
+  "license": "Apache-2.0",
+  "source": "https://github.com/ehasbun/puppet-cis_file_perms",
+  "project_page": "https://github.com/ehasbun/puppet-cis_file_perms",
+  "issues_url": "https://github.com/ehasbun/puppet-cis_file_perms/issues",
+  "dependencies": [],
+  "operatingsystem_support": [
+    {
+      "operatingsystem": "Debian",
+      "operatingsystemrelease": ["11", "12", "13"]
+    },
+    {
+      "operatingsystem": "Ubuntu",
+      "operatingsystemrelease": ["20.04", "22.04", "24.04"]
+    },
+    {
+      "operatingsystem": "RedHat",
+      "operatingsystemrelease": ["8", "9"]
+    }
+  ],
+  "requirements": [
+    {
+      "name": "puppet",
+      "version_requirement": ">= 7.0.0 < 9.0.0"
+    }
+  ],
+  "pdk-version": "3.0.0",
+  "template-url": "https://github.com/puppetlabs/pdk-templates#main"
+}

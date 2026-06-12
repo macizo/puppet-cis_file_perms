@@ -1,0 +1,4 @@
+---
+fixtures:
+  symlinks:
+    cis_file_perms: "#{source_dir}"

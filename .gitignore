@@ -1,0 +1,8 @@
+.bundle/
+vendor/
+Gemfile.lock
+spec/fixtures/modules/
+spec/fixtures/manifests/
+pkg/
+.rspec_status
+*.swp
