@@ -1,12 +1,12 @@
 {
-  "name": "ehasbun-cis_file_perms",
+  "name": "macizo-cis_file_perms",
   "version": "0.1.0",
   "author": "Eduardo Hasbun",
   "summary": "CIS file-permission hardening without catalog bloat: one resource per directory tree via a custom type/provider",
   "license": "Apache-2.0",
-  "source": "https://github.com/ehasbun/puppet-cis_file_perms",
-  "project_page": "https://github.com/ehasbun/puppet-cis_file_perms",
-  "issues_url": "https://github.com/ehasbun/puppet-cis_file_perms/issues",
+  "source": "https://github.com/macizo/puppet-cis_file_perms",
+  "project_page": "https://github.com/macizo/puppet-cis_file_perms",
+  "issues_url": "https://github.com/macizo/puppet-cis_file_perms/issues",
   "dependencies": [],
   "operatingsystem_support": [
     {
