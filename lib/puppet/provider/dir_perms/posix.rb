@@ -118,7 +118,7 @@ Puppet::Type.type(:dir_perms).provide(:posix) do
   def depth_of(path, root)
     return 0 if path == root
 
-    rel = path[(root == '/' ? 1 : root.length + 1)..]
+    rel = path[(root == '/' ? 1 : root.length + 1)..-1]
     rel.count('/') + 1
   end
 
