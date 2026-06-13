@@ -5,8 +5,20 @@ CIS file-permission hardening for Puppet **without catalog bloat**.
 ## The problem
 
 The usual way to enforce CIS controls like *"no group/other write on
-system binary directories"* (CIS Debian Benchmark 6.1.x) is a `file`
-resource with `recurse => true`:
+system binary directories"* is a `file` resource with `recurse => true`:
+
+This control appears in every major Linux CIS benchmark — the number
+varies by distro and version but the requirement is identical everywhere:
+
+| Benchmark | Control numbers |
+|---|---|
+| CIS Debian/Ubuntu | ~6.1.1–6.1.4 |
+| CIS RHEL/CentOS/Rocky | ~6.1.1–6.1.4 |
+| CIS SUSE | ~6.1.1–6.1.4 |
+
+The requirement: no group-write or other-write bits on system binary
+directories (`/bin`, `/sbin`, `/usr/bin`, `/usr/sbin`, `/usr/local/bin`,
+`/usr/local/sbin`, `/usr/local/games`).
 
 ```puppet
 file { '/usr/bin':
