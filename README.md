@@ -100,17 +100,17 @@ deterministic one-hour window (via `fqdn_rand`) between 01:00 and
 06:59 in which the sweep runs once daily. Outside the window the
 resource is skipped entirely — no filesystem walk.
 
-### CIS Debian defaults
+### System binary defaults
 
 ```puppet
-class { 'cis_file_perms::debian':
+class { 'cis_file_perms::system_binaries':
   noop_mode => true,   # start in audit mode
 }
 ```
 
 Enforces `go-w` on `/bin`, `/sbin`, `/usr/bin`, `/usr/sbin`,
 `/usr/local/bin`, `/usr/local/sbin`, `/usr/local/games`
-(CIS Debian 6.1.x).
+(CIS ~6.1.x on all Linux benchmarks).
 
 ## Migrating from dev-sec os_hardening
 
@@ -120,7 +120,7 @@ class { 'os_hardening':
   folders_to_restrict => [],   # disables the 25k-resource recursion
 }
 
-class { 'cis_file_perms::debian':
+class { 'cis_file_perms::system_binaries':
   noop_mode => true,           # audit first, enforce later
 }
 ```
