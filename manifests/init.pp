@@ -23,14 +23,20 @@
 # @param noop_mode
 #   When true, rules audit and report but never change anything.
 #   Recommended for initial rollout.
+#
+# @param force_run
+#   When true, disables the schedule gate so the walk runs on every
+#   puppet agent run. Use temporarily to verify remediation works,
+#   then set back to false.
 class cis_file_perms (
   Hash                  $rules                 = {},
   Boolean               $manage_schedule       = true,
   Integer[0, 22]        $schedule_start_range  = 1,
   Integer[1, 23]        $schedule_spread_hours = 5,
   Boolean               $noop_mode             = false,
+  Boolean               $force_run             = false,
 ) {
-  if $manage_schedule {
+  if $manage_schedule and !$force_run {
     $window_start = $schedule_start_range + fqdn_rand($schedule_spread_hours, 'cis_file_perms')
     $schedule_name = 'cis_file_perms_window'
 

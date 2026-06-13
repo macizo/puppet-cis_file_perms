@@ -9,18 +9,13 @@
 # @param bin_dirs   Directories to enforce 'go-w' on.
 # @param exclude    Paths to skip entirely.
 # @param noop_mode  Audit-only mode; report offenders, change nothing.
+# @param force_run  Force a run to test the module
+
 class cis_file_perms::system_binaries (
-  Array[String[1]] $bin_dirs  = [
-    '/bin',
-    '/sbin',
-    '/usr/bin',
-    '/usr/sbin',
-    '/usr/local/bin',
-    '/usr/local/sbin',
-    '/usr/local/games',
-  ],
+  Array[String[1]] $bin_dirs  = [],
   Array[String[1]] $exclude   = [],
   Boolean          $noop_mode = false,
+  Boolean          $force_run = false,
 ) {
   $rules = $bin_dirs.reduce({}) |Hash $memo, String $dir| {
     $memo + { $dir => { 'strip_mode' => 'go-w', 'exclude' => $exclude } }
@@ -29,5 +24,6 @@ class cis_file_perms::system_binaries (
   class { 'cis_file_perms':
     rules     => $rules,
     noop_mode => $noop_mode,
+    force_run => $force_run,
   }
 }

@@ -1,2 +1,27 @@
 ---
+lookup_options:
+  cis_file_perms::rules:
+    merge: hash
+  cis_file_perms::system_binaries::bin_dirs:
+    merge: unique
+  cis_file_perms::system_binaries::exclude:
+    merge: unique
+
 cis_file_perms::rules: {}
+cis_file_perms::manage_schedule: true
+cis_file_perms::schedule_start_range: 1
+cis_file_perms::schedule_spread_hours: 5
+cis_file_perms::noop_mode: false
+cis_file_perms::force_run: false
+
+cis_file_perms::system_binaries::bin_dirs:
+  - '/bin'
+  - '/sbin'
+  - '/usr/bin'
+  - '/usr/sbin'
+  - '/usr/local/bin'
+  - '/usr/local/sbin'
+  - '/usr/local/games'
+cis_file_perms::system_binaries::exclude: []
+cis_file_perms::system_binaries::noop_mode: false
+cis_file_perms::system_binaries::force_run: false
