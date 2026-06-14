@@ -112,15 +112,15 @@ Enforces `go-w` on `/bin`, `/sbin`, `/usr/bin`, `/usr/sbin`,
 `/usr/local/bin`, `/usr/local/sbin`, `/usr/local/games`
 (CIS ~6.1.x on all Linux benchmarks).
 
-## Using alongside dev-sec os_hardening
+## Using with dev-sec os_hardening
 
-`os_hardening::minimize_access` enforces the same CIS binary directory
-controls but uses `file` with `recurse => true`, generating one catalog
-resource per file found — typically 10,000–25,000 extra resources per run.
+`os_hardening` is a comprehensive hardening module — most of what it does
+(shadow perms, `/bin/su`, system-user shells) is single-resource and has no
+performance impact. The one exception is `minimize_access`, which uses
+`file` with `recurse => true` and generates one catalog resource per file
+found (typically 10,000–25,000 extra per run).
 
-This module solves that specific performance problem. To use both together,
-disable only the recursive part of `minimize_access` and let this module
-handle it instead:
+Disable just that part and let this module handle it instead:
 
 ```puppet
 class { 'os_hardening':
@@ -133,8 +133,7 @@ class { 'cis_file_perms::system_binaries':
 }
 ```
 
-The rest of `minimize_access` (shadow perms, `/bin/su`, system-user shells)
-are single resources with no performance impact — keep them as-is.
+Everything else in `os_hardening` keeps running as normal.
 
 ## Who changes the permissions?
 
