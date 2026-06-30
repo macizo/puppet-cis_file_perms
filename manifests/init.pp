@@ -29,12 +29,12 @@
 #   puppet agent run. Use temporarily to verify remediation works,
 #   then set back to false.
 class cis_file_perms (
-  Hash                  $rules                 = {},
-  Boolean               $manage_schedule       = true,
-  Integer[0, 22]        $schedule_start_range  = 1,
-  Integer[1, 23]        $schedule_spread_hours = 5,
-  Boolean               $noop_mode             = false,
-  Boolean               $force_run             = false,
+  Hash           $rules,
+  Boolean        $manage_schedule,
+  Integer[0, 22] $schedule_start_range,
+  Integer[1, 23] $schedule_spread_hours,
+  Boolean        $noop_mode,
+  Boolean        $force_run,
 ) {
   if $manage_schedule and !$force_run {
     $window_start = $schedule_start_range + fqdn_rand($schedule_spread_hours, 'cis_file_perms')

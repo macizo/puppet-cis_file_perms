@@ -12,10 +12,10 @@
 # @param force_run  Force a run to test the module
 
 class cis_file_perms::system_binaries (
-  Array[String[1]] $bin_dirs  = [],
-  Array[String[1]] $exclude   = [],
-  Boolean          $noop_mode = false,
-  Boolean          $force_run = false,
+  Array[String[1]] $bin_dirs,
+  Array[String[1]] $exclude,
+  Boolean          $noop_mode,
+  Boolean          $force_run,
 ) {
   $rules = $bin_dirs.reduce({}) |Hash $memo, String $dir| {
     $memo + { $dir => { 'strip_mode' => 'go-w', 'exclude' => $exclude } }
