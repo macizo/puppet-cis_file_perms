@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # CIS compliance local check for CheckMK.
-# Reads status files written by the cis_file_perms Puppet module:
-#   /var/lib/check_mk/cis/fs_scan.json  -- written by cis_fs_scan provider
-#   /var/lib/check_mk/cis/audit.json    -- written from cis_audit Facter fact
+# Reads the tool-agnostic status files written by the cis_file_perms
+# Puppet module (cis_file_perms::reporting and the cis_fs_scan
+# provider), both under the same shared directory:
+#   /var/log/cis-reports/fs_scan.json  -- written by cis_fs_scan provider
+#   /var/log/cis-reports/audit.json    -- written by cis_file_perms::reporting
 # Each output line becomes a separate "CIS_*" service in CheckMK.
 
 from __future__ import print_function
@@ -10,7 +12,7 @@ import json
 import os
 import time
 
-STATUS_DIR = '/var/lib/check_mk/cis'
+STATUS_DIR = '/var/log/cis-reports'
 FS_SCAN    = os.path.join(STATUS_DIR, 'fs_scan.json')
 AUDIT      = os.path.join(STATUS_DIR, 'audit.json')
 MAX_AGE    = 90000  # 25 hours -- stale if Puppet hasn't run
