@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+# CIS compliance local check for CheckMK.
+# Reads status files written by the cis_file_perms Puppet module:
+#   /var/lib/check_mk/cis/fs_scan.json  -- written by cis_fs_scan provider
+#   /var/lib/check_mk/cis/audit.json    -- written from cis_audit Facter fact
+# Each output line becomes a separate "CIS_*" service in CheckMK.
+
+from __future__ import print_function
+import json
+import os
+import time
+
+STATUS_DIR = '/var/lib/check_mk/cis'
+FS_SCAN    = os.path.join(STATUS_DIR, 'fs_scan.json')
+AUDIT      = os.path.join(STATUS_DIR, 'audit.json')
+MAX_AGE    = 90000  # 25 hours -- stale if Puppet hasn't run
+
+
+def load(path):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def stale(data):
+    ts = data.get('timestamp')
+    return ts is not None and (time.time() - ts) > MAX_AGE
+
+
+def fmt(items):
+    if not items:
+        return ''
+    return ': ' + ', '.join(str(i) for i in items[:5])
+
+
+def out(status, name, perf, summary):
+    print('%d CIS_%s %s %s' % (status, name, perf, summary))
+
+
+# ── fs_scan ──────────────────────────────────────────────────────────
+fs = load(FS_SCAN)
+if fs is None:
+    for n in ('SUID_SGID', 'World_Writable', 'Unowned_Files'):
+        out(3, n, '-', 'No scan data yet (Puppet not yet run)')
+elif stale(fs):
+    for n in ('SUID_SGID', 'World_Writable', 'Unowned_Files'):
+        out(3, n, '-', 'Scan data stale (>25h since last Puppet run)')
+else:
+    noop = ' (noop - not enforced yet)' if fs.get('noop') else ''
+    for key, name, label in [
+        ('suid_sgid',      'SUID_SGID',     'unexpected SUID/SGID files'),
+        ('world_writable', 'World_Writable', 'world-writable files'),
+        ('unowned',        'Unowned_Files',  'unowned files'),
+    ]:
+        d     = fs.get(key, {})
+        count = d.get('count', 0)
+        if count > 0:
+            out(1, name, '%s=%d' % (key, count),
+                '%d %s%s%s' % (count, label, noop, fmt(d.get('samples', []))))
+        else:
+            out(0, name, '%s=0' % key, 'compliant')
+
+# ── cis_audit ────────────────────────────────────────────────────────
+audit = load(AUDIT)
+if audit is None:
+    out(3, 'User_Audit', '-', 'No audit data yet (Puppet not yet run)')
+else:
+    # List checks: non-empty list = WARN
+    list_checks = [
+        ('extra_uid0_users',           '6.2.4_Root_UID',          'extra UID-0 users'),
+        ('shadow_group_members',       '6.2.7_Shadow_Group',       'shadow group has members'),
+        ('empty_password_users',       '6.2.2_Empty_Passwords',    'users with empty password'),
+        ('duplicate_uids',             '6.2.6_Duplicate_UIDs',     'duplicate UIDs'),
+        ('duplicate_gids',             '6.2.6_Duplicate_GIDs',     'duplicate GIDs'),
+        ('duplicate_usernames',        '6.2.6_Duplicate_Users',    'duplicate usernames'),
+        ('duplicate_groupnames',       '6.2.6_Duplicate_Groups',   'duplicate groupnames'),
+        ('users_missing_home',         '6.2.9_Missing_Homes',      'users missing home dir'),
+        ('users_not_owning_home',      '6.2.10_Home_Ownership',    'users not owning home dir'),
+        ('system_accounts_with_shell', '5.4.2_System_Shells',      'system accounts with login shell'),
+        ('passwd_groups_not_in_group', '6.2.5_Invalid_GIDs',       'users with GID not in group file'),
+        ('password_change_in_future',  '5.4.1.5_Future_Password',  'users with future password change date'),
+    ]
+    for key, name, label in list_checks:
+        val = audit.get(key)
+        if val is None:
+            continue
+        if val:
+            out(1, name, 'count=%d' % len(val), '%d %s%s' % (len(val), label, fmt(val)))
+        else:
+            out(0, name, 'count=0', 'compliant')
+
+    # Boolean checks
+    if audit.get('legacy_plus_entries') is True:
+        out(2, '6.2.3_Legacy_Plus', '-', 'legacy + entries in passwd/shadow/group')
+    elif audit.get('legacy_plus_entries') is False:
+        out(0, '6.2.3_Legacy_Plus', '-', 'compliant')
+
+    if audit.get('root_gid_is_zero') is False:
+        out(2, '5.4.3_Root_GID', '-', 'root primary group is not GID 0')
+    elif audit.get('root_gid_is_zero') is True:
+        out(0, '5.4.3_Root_GID', '-', 'compliant')
