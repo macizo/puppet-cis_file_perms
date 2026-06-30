@@ -3,11 +3,10 @@
 # Drops the cis_audit Facter fact to JSON alongside the fs_scan
 # provider's own status file (cis_fs_scan writes fs_scan.json into the
 # same directory independently of this class). Both land in one place
-# under a stable schema so any monitoring agent -- CheckMK, Wazuh,
-# Nagios/Icinga via NRPE, a Lynis custom check, a Prometheus
-# textfile-collector script, whatever the site already runs -- can
-# read them without this module knowing about that tool. See
-# cis_file_perms::reporting::checkmk for an optional CheckMK adapter.
+# under a stable schema so any monitoring agent -- Wazuh, Nagios/Icinga
+# via NRPE, a Lynis custom check, a Prometheus textfile-collector
+# script, whatever the site already runs -- can read them without this
+# module knowing about that tool.
 #
 # @param report_dir Directory both this class and the cis_fs_scan
 #   provider write status JSON into.
