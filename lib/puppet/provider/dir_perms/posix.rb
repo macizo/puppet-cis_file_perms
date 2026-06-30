@@ -53,7 +53,6 @@ Puppet::Type.type(:dir_perms).provide(:posix) do
     scan[:mode].each do |path|
       st = File.lstat(path)
       next if st.symlink?
-
       File.chmod(st.mode & 0o7777 & ~mask, path)
     end
   end
@@ -83,6 +82,7 @@ Puppet::Type.type(:dir_perms).provide(:posix) do
         want_gid = check_group ? desired_gid : nil
 
         Find.find(root) do |path|
+          next if path == root # never flag the scan root itself -- matches the standard find -mindepth 1 idiom this is meant to mirror; stripping execute from the root container (not its contents) breaks traversal for /home, /var/log, etc.
           Find.prune if excluded?(path)
           Find.prune if depth_of(path, root) > resource[:max_depth]
 
@@ -99,20 +99,44 @@ Puppet::Type.type(:dir_perms).provide(:posix) do
         end
       end
 
+      write_status(offenders)
       offenders
     end
   end
 
   private
 
+  # Full offender lists, not just the 5-sample summary Puppet's own
+  # notice/report machinery shows. One file per resource (path-derived
+  # name) under /var/lib/cis_file_perms/dir_perms/, so "what exact files
+  # would this change" is answerable by reading a file on the node,
+  # independent of whether report processing is even working.
+  def write_status(offenders)
+    require 'json'
+    require 'fileutils'
+    dir = '/var/log/cis-reports/dir_perms'
+    FileUtils.mkdir_p(dir)
+    safe_name = resource[:path].gsub(%r{[^a-zA-Z0-9_-]+}, '_').sub(%r{\A_}, '')
+    status = {
+      'timestamp' => Time.now.to_i,
+      'noop'      => Puppet[:noop],
+      'path'      => resource[:path],
+      'mode'      => { 'count' => offenders[:mode].length, 'paths' => offenders[:mode] },
+      'owner'     => { 'count' => offenders[:owner].length, 'paths' => offenders[:owner] },
+      'group'     => { 'count' => offenders[:group].length, 'paths' => offenders[:group] },
+    }
+    File.write("#{dir}/#{safe_name}.json", JSON.generate(status))
+  rescue => e
+    Puppet.warning("dir_perms #{resource[:path]}: could not write status file: #{e}")
+  end
+
   def mask
     @mask ||= self.class.parse_strip_mode(resource[:strip_mode])
   end
 
   def excluded?(path)
-    resource[:exclude].any? do |ex|
-      path == ex || path.start_with?("#{ex}/")
-    end
+    resource[:exclude].any? { |ex| path == ex || path.start_with?("#{ex}/") } ||
+      resource[:exclude_glob].any? { |pattern| File.fnmatch?(pattern, path, File::FNM_PATHNAME) }
   end
 
   def depth_of(path, root)

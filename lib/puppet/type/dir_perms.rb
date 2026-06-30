@@ -143,7 +143,8 @@ Puppet::Type.newtype(:dir_perms) do
   end
 
   newparam(:exclude) do
-    desc 'Absolute paths to skip. A directory entry excludes its whole subtree.'
+    desc 'Absolute paths to skip. A directory entry excludes its whole subtree. ' \
+         'For pattern-based exclusion (e.g. rotated log filenames), use exclude_glob instead.'
 
     munge do |value|
       Array(value).map { |p| p == '/' ? p : p.chomp('/') }
@@ -153,6 +154,22 @@ Puppet::Type.newtype(:dir_perms) do
       Array(value).each do |p|
         unless p.is_a?(String) && p.start_with?('/')
           raise ArgumentError, "exclude entries must be absolute paths, got '#{p}'"
+        end
+      end
+    end
+
+    defaultto []
+  end
+
+  newparam(:exclude_glob) do
+    desc 'Absolute shell-glob patterns to skip (e.g. "/var/log/wtmp*"). ' \
+         'Matched with File.fnmatch? against the full path -- "*" does not cross "/". ' \
+         'Kept separate from `exclude` so plain paths are never silently glob-matched.'
+
+    validate do |value|
+      Array(value).each do |p|
+        unless p.is_a?(String) && p.start_with?('/')
+          raise ArgumentError, "exclude_glob entries must be absolute paths, got '#{p}'"
         end
       end
     end

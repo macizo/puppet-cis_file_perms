@@ -95,6 +95,35 @@ describe Puppet::Type.type(:dir_perms).provider(:posix) do
         expect(provider.strip_mode).to contain_exactly(File.join(@root, 'bad'))
       end
 
+      it 'respects exclude_glob (pattern match, not a subtree)' do
+        File.write(File.join(@root, 'wtmp'), 'x')
+        File.chmod(0o775, File.join(@root, 'wtmp')) # g+w, deliberately "bad"
+        File.write(File.join(@root, 'wtmp-20260601.gz'), 'x')
+        File.chmod(0o775, File.join(@root, 'wtmp-20260601.gz'))
+
+        provider = provider_for(
+          build_resource(exclude_glob: [File.join(@root, 'wtmp*')]),
+        )
+        offenders = provider.strip_mode
+        expect(offenders).not_to include(File.join(@root, 'wtmp'))
+        expect(offenders).not_to include(File.join(@root, 'wtmp-20260601.gz'))
+        expect(offenders).to include(File.join(@root, 'bad'))
+      end
+
+      it 'exclude_glob does not let "*" cross a directory separator (FNM_PATHNAME)' do
+        # Without FNM_PATHNAME, '*' would happily match across '/', so
+        # "<root>/*ad" would match both "<root>/bad" AND
+        # "<root>/sub/also_bad" (the '*' absorbing "sub/also_b"). With
+        # FNM_PATHNAME, '*' stops at the first '/', so only the top-level
+        # file matches.
+        provider = provider_for(
+          build_resource(exclude_glob: ["#{@root}/*ad"]),
+        )
+        offenders = provider.strip_mode
+        expect(offenders).not_to include(File.join(@root, 'bad'))         # top-level: excluded
+        expect(offenders).to include(File.join(@root, 'sub', 'also_bad')) # nested: '*' can't reach it
+      end
+
       it 'respects max_depth' do
         provider = provider_for(build_resource(max_depth: 1))
         expect(provider.strip_mode).to contain_exactly(File.join(@root, 'bad'))

@@ -87,6 +87,24 @@ describe Puppet::Type.type(:dir_perms) do
     end
   end
 
+  describe 'exclude_glob' do
+    it 'accepts absolute glob patterns' do
+      res = described_class.new(name: '/x', strip_mode: 'go-w',
+                                exclude_glob: ['/var/log/wtmp*'])
+      expect(res[:exclude_glob]).to eq(['/var/log/wtmp*'])
+    end
+
+    it 'rejects relative patterns' do
+      expect {
+        described_class.new(name: '/x', strip_mode: 'go-w', exclude_glob: ['wtmp*'])
+      }.to raise_error(Puppet::Error, %r{absolute})
+    end
+
+    it 'defaults to empty' do
+      expect(described_class.new(**valid_params)[:exclude_glob]).to eq([])
+    end
+  end
+
   describe 'max_depth' do
     it 'defaults to 32' do
       expect(described_class.new(**valid_params)[:max_depth]).to eq(32)
