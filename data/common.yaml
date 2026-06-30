@@ -6,6 +6,12 @@ lookup_options:
     merge: unique
   cis_file_perms::system_binaries::exclude:
     merge: unique
+  cis_file_perms::fs_scan::paths:
+    merge: unique
+  cis_file_perms::fs_scan::suid_whitelist:
+    merge: unique
+  cis_file_perms::fs_scan::exclude:
+    merge: unique
 
 cis_file_perms::rules: {}
 cis_file_perms::manage_schedule: true
@@ -25,3 +31,127 @@ cis_file_perms::system_binaries::bin_dirs:
 cis_file_perms::system_binaries::exclude: []
 cis_file_perms::system_binaries::noop_mode: false
 cis_file_perms::system_binaries::force_run: false
+
+cis_file_perms::fs_scan::paths:
+  - '/usr'
+  - '/bin'
+  - '/sbin'
+  - '/home'
+  - '/opt'
+  - '/var'
+
+cis_file_perms::fs_scan::suid_whitelist:
+  # standard system binaries that legitimately need suid/sgid
+  - '/usr/bin/at'
+  - '/usr/bin/chage'
+  - '/usr/bin/chfn'
+  - '/usr/bin/chsh'
+  - '/usr/bin/crontab'
+  - '/usr/bin/dotlock.mailutils'
+  - '/usr/bin/expiry'
+  - '/usr/bin/gpasswd'
+  - '/usr/bin/fusermount'
+  - '/usr/bin/fusermount3'
+  - '/usr/bin/mlocate'
+  - '/usr/bin/mount'
+  - '/usr/bin/newgrp'
+  - '/usr/bin/passwd'
+  - '/usr/bin/procmail'
+  - '/usr/bin/ssh-agent'
+  - '/usr/bin/sudo'
+  - '/usr/bin/umount'
+  - '/usr/lib/dbus-1.0/dbus-daemon-launch-helper'
+  - '/usr/lib/mysql/plugin/auth_pam_tool_dir/auth_pam_tool'
+  - '/usr/lib/x86_64-linux-gnu/utempter/utempter'
+  - '/usr/sbin/lldpcli'
+  - '/usr/sbin/mount.nfs'
+  - '/usr/sbin/pam-tmpdir-helper'
+  - '/usr/sbin/postdrop'
+  - '/usr/sbin/postqueue'
+  - '/usr/sbin/unix_chkpwd'
+  # directories with sgid for group inheritance
+  - '/var/local'
+  - '/var/log/exim4'
+  - '/var/mail'
+  - '/var/spool/postfix/public'
+  - '/var/www/admin'
+  - '/var/www/admin/index.html'
+  - '/var/www/alertmanager'
+  - '/var/www/grafana'
+  - '/var/www/prometheus'
+  - '/var/www/default'
+  - '/var/www/default/redirect'
+  # polkit
+  - '/usr/bin/pkexec'
+  - '/usr/libexec/polkit-agent-helper-1'
+  # misc
+  - '/usr/lib/w3m/w3mimgdisplay'
+  - '/usr/local/share/fonts'
+  - '/usr/local/share/man/man3'
+  # alternate paths for binaries already listed above (symlink farms,
+  # distro-specific locations) plus additional standard system binaries
+  - '/bin/mount'
+  - '/bin/ping'
+  - '/bin/ping6'
+  - '/bin/fusermount'
+  - '/sbin/pam_timestamp_check'
+  - '/sbin/unix_chkpwd'
+  - '/sbin/mount.nfs'
+  - '/sbin/umount.nfs'
+  - '/sbin/mount.nfs4'
+  - '/sbin/umount.nfs4'
+  - '/usr/bin/locate'
+  - '/usr/bin/traceroute6.iputils'
+  - '/usr/bin/wall'
+  - '/usr/bin/write'
+  - '/usr/bin/screen'
+  - '/usr/bin/sudoedit'
+  - '/usr/libexec/utempter/utempter'
+  - '/usr/sbin/lockdev'
+  - '/usr/sbin/sendmail.sendmail'
+  - '/usr/sbin/suexec'
+  - '/usr/sbin/ccreds_validate'
+  # X11
+  - '/usr/bin/Xorg'
+  - '/usr/bin/X'
+  - '/usr/lib/vte/gnome-pty-helper'
+  - '/usr/lib/libvte9/gnome-pty-helper'
+  - '/usr/lib/libvte-2.90-9/gnome-pty-helper'
+  # squid auth helpers
+  - '/usr/lib/squid/ncsa_auth'
+  - '/usr/lib/squid/pam_auth'
+  # kerberos
+  - '/usr/kerberos/bin/ksu'
+
+cis_file_perms::fs_scan::exclude:
+  # postfix sockets are legitimately world-writable
+  - '/var/spool/postfix/private'
+  - '/var/spool/postfix/dev'
+  - '/var/spool/postfix/public'
+  # system tmp dirs managed by systemd
+  - '/var/tmp'
+  # container image layers — binaries inside have their own suid/sgid
+  - '/var/lib/docker'
+  - '/var/lib/containerd'
+  # app data dirs — managed by their own services
+  - '/var/lib/elasticsearch'
+  - '/var/lib/kibana'
+  - '/var/lib/rundeck'
+  - '/var/lib/php/sessions'
+  - '/var/lib/msp'
+  # redis log dir has sgid set by package install
+  - '/var/log/redis'
+  # jvm installations bundle their own suid helpers
+  - '/usr/lib/jvm'
+  # third-party app installs
+  - '/usr/local/facileManager'
+  # python2 virtualenvs carry suid bits from the system python install
+  - '/usr/local/lib/python2.7'
+  # journal subdirs are named by machine-id, not predictable paths
+  - '/var/log/journal'
+cis_file_perms::fs_scan::manage_schedule: true
+cis_file_perms::fs_scan::schedule_period: 'weekly'
+cis_file_perms::fs_scan::schedule_range: '1:00 - 2:00'
+cis_file_perms::fs_scan::schedule_weekday: ~
+cis_file_perms::fs_scan::noop_mode: true
+cis_file_perms::fs_scan::force_run: false
