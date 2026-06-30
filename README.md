@@ -79,6 +79,30 @@ dir_perms { '/var/log':
 `strip_mode` takes symbolic removal notation: `go-w`, `o-rwx`,
 `a-rwx`, or comma-separated combinations (`g-w,o-rwx`).
 
+All three parameters (`strip_mode`, `owner`, `group`) are optional and
+independent. The provider only checks what you declare — if you omit
+`owner`, no uid comparison is done anywhere in the walk, so there is
+no unnecessary overhead:
+
+```puppet
+# only fix permissions, don't touch ownership
+dir_perms { '/opt/myapp':
+  strip_mode => 'o-rwx',
+}
+
+# only enforce owner, leave mode and group alone
+dir_perms { '/opt/myapp':
+  owner => 'root',
+}
+
+# all three at once
+dir_perms { '/opt/myapp':
+  strip_mode => 'go-w',
+  owner      => 'root',
+  group      => 'root',
+}
+```
+
 ### Class with hiera-driven rules and a daily randomized window
 
 ```puppet
@@ -143,6 +167,75 @@ second enforcement actor. Detection happens in the property getter
 (read-only walk); remediation in the setter, only on the offender list,
 and only when puppet is applying (never in `--noop`). Every change is
 in the puppet report and PuppetDB — full audit trail.
+
+## `cis_fs_scan` — SUID/SGID and world-writable enforcement
+
+Scans one or more directory trees and strips illegitimate SUID/SGID bits
+and world-writable permissions.
+
+```puppet
+class { 'cis_file_perms::fs_scan':
+  noop_mode => true,   # always start here
+}
+```
+
+> [!CAUTION]
+> ### ALWAYS build a whitelist before enabling enforcement
+>
+> SUID and SGID bits exist for a reason. Many system binaries — `sudo`,
+> `passwd`, `login`, `unix_chkpwd`, `postdrop`, `ssh-agent` — depend on
+> them to function. Stripping these bits without a whitelist **will break
+> your servers**:
+>
+> - `sudo` stops working — you lose privilege escalation
+> - `login` / `unix_chkpwd` lose SUID — PAM authentication fails, locking
+>   you out of console login and `su`
+> - `postdrop` / `postqueue` lose SGID — mail delivery breaks
+> - Docker/containerd overlay2 layers contain copies of system binaries
+>   with SUID — they appear as violations but must be excluded, not stripped
+>
+> **The correct rollout sequence:**
+>
+> 1. Deploy with `noop_mode: true` and `force_run: true` on non-prod
+> 2. Review the noop report — identify every flagged path
+> 3. For each path: is it a legitimate system binary? Add to `suid_whitelist`.
+>    Is it a container layer or app data dir? Add to `exclude`.
+> 4. Repeat until the noop report contains only real violations
+> 5. Only then set `noop_mode: false`
+>
+> If you skip steps 1–4 and go straight to enforce mode, every Puppet run
+> will strip bits off system binaries. Package manager reinstalls will
+> restore them, causing a permanent ping-pong that also masks real violations.
+>
+> **If you break your servers like the author did — who took down 17 test servers before building the whitelist — you're on your own.**
+
+**Recovery** if you break a server: boot to GRUB recovery mode (no PAM
+needed), or if SSH key auth still works:
+
+```bash
+apt-get install --reinstall -y sudo passwd login coreutils mount \
+  openssh-client postfix policykit-1 dbus && systemctl restart postfix
+```
+
+### Hiera configuration
+
+```yaml
+cis_file_perms::fs_scan::noop_mode: true      # audit-only until whitelist is validated
+cis_file_perms::fs_scan::suid_whitelist:
+  - '/usr/bin/sudo'
+  - '/usr/bin/passwd'
+  - '/usr/bin/mount'
+  - '/usr/sbin/unix_chkpwd'
+  - '/usr/sbin/postdrop'
+  - '/usr/sbin/postqueue'
+  # ... see data/common.yaml for the full default list
+
+cis_file_perms::fs_scan::exclude:
+  - '/var/lib/docker'        # container image layers
+  - '/var/lib/containerd'    # container image layers
+  - '/var/spool/postfix/dev'
+  - '/var/spool/postfix/private'
+```
 
 ## Roadmap
 
