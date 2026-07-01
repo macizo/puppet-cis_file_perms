@@ -207,7 +207,7 @@ class { 'cis_file_perms::fs_scan':
 > will strip bits off system binaries. Package manager reinstalls will
 > restore them, causing a permanent ping-pong that also masks real violations.
 >
-> **If you break your servers like the author did — who took down 17 test servers before building the whitelist — you're on your own.**
+> **If you break your servers like the author did — who took down a few servers before building the whitelist — you're on your own.**
 
 **Recovery** if you break a server: boot to GRUB recovery mode (no PAM
 needed), or if SSH key auth still works:
