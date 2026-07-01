@@ -36,4 +36,4 @@ jobs:
           ruby-version: '3.2'
           bundler-cache: true
       - name: Puppet lint
-        run: bundle exec puppet-lint --fail-on-warnings manifests
+        run: bundle exec puppet-lint --relative --fail-on-warnings manifests
