@@ -12,6 +12,12 @@ lookup_options:
     merge: unique
   cis_file_perms::fs_scan::exclude:
     merge: unique
+  cis_file_perms::fs_scan::home_exclude_users:
+    merge: unique
+  cis_file_perms::fs_scan::prohibited_dotfiles:
+    merge: unique
+  cis_file_perms::fs_scan::restricted_dotfiles:
+    merge: hash
 
 cis_file_perms::rules: {}
 cis_file_perms::manage_schedule: true
@@ -155,3 +161,16 @@ cis_file_perms::fs_scan::schedule_range: '1:00 - 2:00'
 cis_file_perms::fs_scan::schedule_weekday: ~
 cis_file_perms::fs_scan::noop_mode: true
 cis_file_perms::fs_scan::force_run: false
+cis_file_perms::fs_scan::dotfiles_enabled: true
+# Audit first. This must be explicitly enabled after reviewing fs_scan.json;
+# enforcement can change ownership/modes and remove prohibited trust files.
+cis_file_perms::fs_scan::dotfile_enforce: false
+cis_file_perms::fs_scan::home_min_uid: 1000
+cis_file_perms::fs_scan::include_root: true
+cis_file_perms::fs_scan::home_exclude_users: []
+cis_file_perms::fs_scan::dotfile_forbidden_mask: '0022'
+cis_file_perms::fs_scan::restricted_dotfiles:
+  '.netrc': '0600'
+cis_file_perms::fs_scan::prohibited_dotfiles:
+  - '.forward'
+  - '.rhosts'

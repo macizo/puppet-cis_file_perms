@@ -42,6 +42,14 @@ class cis_file_perms::fs_scan (
   Optional[String] $schedule_weekday,
   Boolean          $noop_mode,
   Boolean          $force_run,
+  Boolean          $dotfiles_enabled,
+  Boolean          $dotfile_enforce,
+  Integer[0]       $home_min_uid,
+  Boolean          $include_root,
+  Array[String]    $home_exclude_users,
+  String           $dotfile_forbidden_mask,
+  Hash[String, String] $restricted_dotfiles,
+  Array[String]    $prohibited_dotfiles,
 ) {
   if $manage_schedule and !$force_run {
     schedule { 'cis_fs_scan_window':
@@ -57,10 +65,18 @@ class cis_file_perms::fs_scan (
   }
 
   cis_fs_scan { 'scan':
-    paths          => $paths,
-    suid_whitelist => $suid_whitelist,
-    exclude        => $exclude,
-    noop           => $noop_mode,
-    *              => $schedule_attr,
+    paths                  => $paths,
+    suid_whitelist         => $suid_whitelist,
+    exclude                => $exclude,
+    dotfiles_enabled       => $dotfiles_enabled,
+    dotfile_enforce        => $dotfile_enforce,
+    home_min_uid           => $home_min_uid,
+    include_root           => $include_root,
+    home_exclude_users     => $home_exclude_users,
+    dotfile_forbidden_mask => $dotfile_forbidden_mask,
+    restricted_dotfiles    => $restricted_dotfiles,
+    prohibited_dotfiles    => $prohibited_dotfiles,
+    noop                   => $noop_mode,
+    *                      => $schedule_attr,
   }
 }

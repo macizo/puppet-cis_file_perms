@@ -1,6 +1,8 @@
 require 'spec_helper'
 require 'tmpdir'
 require 'fileutils'
+require File.expand_path('../../../../../lib/puppet/type/cis_fs_scan', __dir__)
+require File.expand_path('../../../../../lib/puppet/provider/cis_fs_scan/posix', __dir__)
 
 describe Puppet::Type.type(:cis_fs_scan).provider(:posix) do
   around(:each) do |example|
@@ -12,7 +14,7 @@ describe Puppet::Type.type(:cis_fs_scan).provider(:posix) do
 
   def build_resource(**overrides)
     Puppet::Type.type(:cis_fs_scan).new(
-      { name: 'test', paths: [@root], suid_whitelist: [] }.merge(overrides),
+      { name: 'test', paths: [@root], suid_whitelist: [], dotfiles_enabled: false }.merge(overrides),
     )
   end
   
@@ -30,6 +32,11 @@ describe Puppet::Type.type(:cis_fs_scan).provider(:posix) do
       # for world_writable_files tests
     File.write(File.join(@root, 'ww_file'),    'x'); File.chmod(0o666,  File.join(@root, 'ww_file'))
     File.write(File.join(@root, 'sub', 'ww_sub'), 'x'); File.chmod(0o777, File.join(@root, 'sub', 'ww_sub'))
+
+    FileUtils.mkdir_p(File.join(@root, 'sgid_dir'))
+    File.chmod(0o2775, File.join(@root, 'sgid_dir'))
+    FileUtils.mkdir_p(File.join(@root, 'ww_dir'))
+    File.chmod(0o0777, File.join(@root, 'ww_dir'))
 
     File.chmod(0o755, File.join(@root, 'sub'))
     File.chmod(0o755, @root)
@@ -71,6 +78,13 @@ describe Puppet::Type.type(:cis_fs_scan).provider(:posix) do
     it 'respects exclude' do
       provider = provider_for(build_resource(exclude: [File.join(@root, 'sub')]))
       expect(provider.world_writable_files).to contain_exactly(File.join(@root, 'ww_file'))
+    end
+
+    it 'does not classify SGID or world-writable directories as files' do
+      provider = provider_for(build_resource)
+
+      expect(provider.suid_sgid).not_to include(File.join(@root, 'sgid_dir'))
+      expect(provider.world_writable_files).not_to include(File.join(@root, 'ww_dir'))
     end
 
     it 'respects exclude_glob' do
@@ -166,7 +180,95 @@ describe Puppet::Type.type(:cis_fs_scan).provider(:posix) do
       expect(File.stat(f).mode & 0o002).to eq(0)
       expect(File.stat(f).mode & 0o664).to eq(0o664)
     end
+
+    it 'does not change SGID or world-writable directory modes' do
+      provider = provider_for(build_resource)
+      provider.suid_sgid = []
+      provider.world_writable_files = []
+
+      expect(File.stat(File.join(@root, 'sgid_dir')).mode & 0o7777).to eq(0o2775)
+      expect(File.stat(File.join(@root, 'ww_dir')).mode & 0o7777).to eq(0o0777)
+    end
   end
+
+  describe 'local-user dotfile controls' do
+    let(:passwd_entry) do
+      double(
+        name: 'testuser',
+        uid: Process.uid,
+        gid: Process.gid,
+        dir: @root,
+        shell: '/bin/bash',
+      )
+    end
+
+    before(:each) do
+      allow(Etc).to receive(:passwd).and_yield(passwd_entry)
+      allow(Etc).to receive(:group).and_yield(double(gid: Process.gid))
+    end
+
+    def dotfile_resource(**overrides)
+      build_resource(
+        dotfiles_enabled: true,
+        dotfile_enforce: false,
+        home_min_uid: 0,
+        include_root: false,
+        **overrides,
+      )
+    end
+
+    it 'detects unsafe ordinary, restricted, and prohibited dotfiles' do
+      bashrc = File.join(@root, '.bashrc')
+      netrc = File.join(@root, '.netrc')
+      forward = File.join(@root, '.forward')
+      File.write(bashrc, 'x'); File.chmod(0o666, bashrc)
+      File.write(netrc, 'x'); File.chmod(0o640, netrc)
+      File.write(forward, 'x'); File.chmod(0o600, forward)
+
+      provider = provider_for(dotfile_resource)
+      expect(provider.dotfiles_unsafe_mode).to contain_exactly(bashrc)
+      expect(provider.restricted_dotfiles_unsafe_mode).to contain_exactly(netrc)
+      expect(provider.prohibited_dotfiles_found).to contain_exactly(forward)
+    end
+
+    it 'ignores ordinary symlinks without following them' do
+      link = File.join(@root, '.linked')
+      File.symlink(File.join(@root, 'ww_file'), link)
+
+      provider = provider_for(dotfile_resource)
+      expect(provider.dotfiles_unsafe_mode).not_to include(link)
+      expect(provider.dotfiles_wrong_owner).not_to include(link)
+    end
+
+    it 'remediates modes and removes prohibited files only when enforcement is enabled' do
+      bashrc = File.join(@root, '.bashrc')
+      netrc = File.join(@root, '.netrc')
+      rhosts = File.join(@root, '.rhosts')
+      File.write(bashrc, 'x'); File.chmod(0o666, bashrc)
+      File.write(netrc, 'x'); File.chmod(0o664, netrc)
+      File.write(rhosts, 'x'); File.chmod(0o600, rhosts)
+
+      provider = provider_for(dotfile_resource(dotfile_enforce: true))
+      provider.dotfiles_unsafe_mode = []
+      provider.restricted_dotfiles_unsafe_mode = []
+      provider.prohibited_dotfiles_found = []
+
+      expect(File.stat(bashrc).mode & 0o022).to eq(0)
+      expect(File.stat(netrc).mode & 0o077).to eq(0)
+      expect(File.exist?(rhosts)).to be(false)
+    end
+
+    it 'does not remediate while dotfile enforcement is disabled' do
+      forward = File.join(@root, '.forward')
+      File.write(forward, 'x')
+
+      provider = provider_for(dotfile_resource)
+      provider.prohibited_dotfiles_found = []
+
+      expect(File.exist?(forward)).to be(true)
+    end
+  end
+
   describe 'edge cases' do
     it 'returns empty when root does not exist' do
       resource = build_resource(paths: ['/nonexistent/path/xyz'])

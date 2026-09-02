@@ -168,10 +168,11 @@ second enforcement actor. Detection happens in the property getter
 and only when puppet is applying (never in `--noop`). Every change is
 in the puppet report and PuppetDB — full audit trail.
 
-## `cis_fs_scan` — SUID/SGID and world-writable enforcement
+## `cis_fs_scan` — filesystem and local-user dotfile controls
 
 Scans one or more directory trees and strips illegitimate SUID/SGID bits
-and world-writable permissions.
+and world-writable permissions. It also inspects top-level dotfiles for
+local interactive users and root without recursively walking each home.
 
 ```puppet
 class { 'cis_file_perms::fs_scan':
@@ -235,7 +236,26 @@ cis_file_perms::fs_scan::exclude:
   - '/var/lib/containerd'    # container image layers
   - '/var/spool/postfix/dev'
   - '/var/spool/postfix/private'
+
+# Dotfiles are audited independently of the broader filesystem noop setting.
+# Review /var/log/cis-reports/fs_scan.json before enabling remediation.
+cis_file_perms::fs_scan::dotfiles_enabled: true
+cis_file_perms::fs_scan::dotfile_enforce: false
+cis_file_perms::fs_scan::home_min_uid: 1000
+cis_file_perms::fs_scan::include_root: true
+cis_file_perms::fs_scan::dotfile_forbidden_mask: '0022'
+cis_file_perms::fs_scan::restricted_dotfiles:
+  '.netrc': '0600'
+cis_file_perms::fs_scan::prohibited_dotfiles:
+  - '.forward'
+  - '.rhosts'
 ```
+
+With `dotfile_enforce: false`, findings are warnings plus structured JSON
+only. When explicitly enabled, the provider corrects ownership, removes
+the configured forbidden permission bits, tightens restricted files, and
+unlinks prohibited files. It never follows symlinks and refuses to remove
+a directory that happens to use a prohibited filename.
 
 ## Roadmap
 
