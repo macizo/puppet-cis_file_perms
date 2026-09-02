@@ -174,6 +174,18 @@ Scans one or more directory trees and strips illegitimate SUID/SGID bits
 and world-writable permissions. It also inspects top-level dotfiles for
 local interactive users and root without recursively walking each home.
 
+### Scan boundaries
+
+The SUID/SGID and world-writable checks apply to regular files only.
+Directories are deliberately not remediated by `cis_fs_scan`: SGID on a
+directory can be intentional group-inheritance behavior, and directory
+write permissions require different operational review. Use `dir_perms`
+rules when directory modes or ownership must be managed.
+
+Dotfile inspection is a separate top-level home-directory pass. It does
+not recursively scan home directories, does not follow symlinks, and only
+changes dotfiles when `dotfile_enforce` is explicitly enabled.
+
 ```puppet
 class { 'cis_file_perms::fs_scan':
   noop_mode => true,   # always start here
@@ -256,6 +268,16 @@ only. When explicitly enabled, the provider corrects ownership, removes
 the configured forbidden permission bits, tightens restricted files, and
 unlinks prohibited files. It never follows symlinks and refuses to remove
 a directory that happens to use a prohibited filename.
+
+### Deploying type/provider changes
+
+Puppet Server keeps custom Ruby types and providers in long-lived JRuby
+instances. After deploying a new parameter or provider implementation,
+allow the configured environment cache to expire or restart Puppet Server
+before compiling catalogs. If a catalog reports `no parameter named ...`
+even though the type file contains that parameter, stale server-side Ruby
+code is the likely cause. Manifest- and Hiera-only changes do not normally
+require this restart.
 
 ## Roadmap
 
